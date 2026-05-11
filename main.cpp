@@ -8,8 +8,8 @@
 #include <vector>
 #include <tuple>
 
-constexpr int width  = 800;
-constexpr int height = 800;
+constexpr int width  = 128;
+constexpr int height = 128;
 
 constexpr TGAColor white   = {255, 255, 255, 255}; // attention, BGRA order
 constexpr TGAColor green   = {  0, 255,   0, 255};
@@ -18,16 +18,17 @@ constexpr TGAColor blue    = {255, 128,  64, 255};
 constexpr TGAColor yellow  = {  0, 200, 255, 255};
 
 void line(int ax, int ay, int bx, int by, TGAImage &img, const TGAColor &color);
-std::tuple<int,int> project(vec3 v); 
-void draw_model(const Model &m, TGAImage &img, const TGAColor &pointc, const TGAColor &linec);
+void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &img, const TGAColor &color);
 
 int main(int argc, char** argv) 
 {
 
     TGAImage framebuffer(width, height, TGAImage::RGB);
-    Model *m= new Model(argv[1]);
-    draw_model(*m,framebuffer,white,red);
     
+    triangle(  7, 45, 35, 100, 45,  60, framebuffer, red);
+    triangle(120, 35, 90,   5, 45, 110, framebuffer, white);
+    triangle(115, 83, 80,  90, 85, 120, framebuffer, green);
+
     framebuffer.write_tga_file("framebuffer.tga");
     return 0;
 }
@@ -65,32 +66,49 @@ void line(int ax, int ay, int bx, int by, TGAImage &img, const TGAColor &color)
     }
 }
 
-std::tuple<int,int> project(vec3 v)
+void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &img, const TGAColor &color)
 {
-    return {
-        (v.x + 1.) * width/2,
-        (v.y + 1.) * height/2,
-    };
-}
-
-void draw_model(const Model &m, TGAImage &img, const TGAColor &pointc, const TGAColor &linec)
-{
-    vec3 v1,v2,v3;
-    for(int i=0; i <= m.nfaces(); i++)
+    if(ay>by)
     {
-        v1 = m.vert(i,0);
-        v2 = m.vert(i,1);
-        v3 = m.vert(i,2);
+        std::swap(ax,bx);
+        std::swap(ay,by);
+    }
+    if(ay>cy)
+    {
+        std::swap(cx,ax);
+        std::swap(cy,ay);
+    }
+    if(by>cy)
+    {
+        std::swap(cx,bx);
+        std::swap(cy,by);
+    }
+    int total_height = cy-ay;
 
-        auto [ax,ay] = project(v1);
-        
-        auto [bx,by] = project(v2);
-        auto [cx,cy] = project(v3);
-        line(ax,ay,bx,by,img,linec);
-        line(ax,ay,bx,by,img,linec);
-        line(cx,cy,bx,by,img,linec);
-        img.set(ax,ay,pointc);
-        img.set(bx,by,pointc);
-        img.set(cx,cy,pointc);
+    if(ay != by)
+    {
+        int segment_height = by - ay;
+        for (int y = ay; y <= by; y++)
+        {
+            int x1 = ax + ((cx-ax) * (y-ay)) / total_height;
+            int x2 = ax + ((bx-ax) * (y-ay)) / segment_height;
+            for(int x = std::min(x1,x2); x < std::max(x1,x2); x++)
+            {
+                img.set(x,y,color);
+            }
+        }
+    }
+    if(by != cy)
+    {
+        int segment_height = cy - by;
+        for (int y = by; y <= cy; y++)
+        {
+            int x1 = ax + ((cx-ax) * (y-ay)) / total_height;
+            int x2 = bx + ((cx-bx) * (y-by)) / segment_height;
+            for(int x = std::min(x1,x2); x < std::max(x1,x2); x++)
+            {
+                img.set(x,y,color);
+            }
+        }
     }
 }

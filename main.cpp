@@ -8,8 +8,8 @@
 #include <vector>
 #include <tuple>
 
-constexpr int width  = 128;
-constexpr int height = 128;
+constexpr int width  = 400;
+constexpr int height = 400;
 
 constexpr TGAColor white   = {255, 255, 255, 255}; // attention, BGRA order
 constexpr TGAColor green   = {  0, 255,   0, 255};
@@ -20,14 +20,33 @@ constexpr TGAColor yellow  = {  0, 200, 255, 255};
 void line(int ax, int ay, int bx, int by, TGAImage &img, const TGAColor &color);
 void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &img, const TGAColor &color);
 
+std::tuple<int,int> project(vec3 v)
+{
+    return {
+        (v.x + 1.) * width/2,
+        (v.y + 1.) * height/2
+    };
+}
+
+double signed_triangle_area(int ax, int ay, int bx, int by, int cx, int cy)
+{
+    return .5 * ((by-ay) * (bx+ax) + (cy-by) * (cx+bx) + (ay-cy)*(ax+cx));
+}
+
 int main(int argc, char** argv) 
 {
-
     TGAImage framebuffer(width, height, TGAImage::RGB);
+    Model m(argv[1]);
+
+    std::srand(std::time({}));
+    for (int i = 0; i < m.nfaces(); i++)
+    {
+        auto [ax,ay] = project(m.vert(i, 0));
+        auto [bx,by] = project(m.vert(i, 1));
+        auto [cx,cy] = project(m.vert(i, 2));
+        triangle(ax,ay,bx,by,cx,cy,framebuffer,{rand()%255,rand()%255,rand()%255,rand()%255,});
+    }
     
-    triangle(  7, 45, 35, 100, 45,  60, framebuffer, red);
-    triangle(120, 35, 90,   5, 45, 110, framebuffer, white);
-    triangle(115, 83, 80,  90, 85, 120, framebuffer, green);
 
     framebuffer.write_tga_file("framebuffer.tga");
     return 0;
@@ -68,47 +87,23 @@ void line(int ax, int ay, int bx, int by, TGAImage &img, const TGAColor &color)
 
 void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &img, const TGAColor &color)
 {
-    if(ay>by)
-    {
-        std::swap(ax,bx);
-        std::swap(ay,by);
-    }
-    if(ay>cy)
-    {
-        std::swap(cx,ax);
-        std::swap(cy,ay);
-    }
-    if(by>cy)
-    {
-        std::swap(cx,bx);
-        std::swap(cy,by);
-    }
-    int total_height = cy-ay;
+    int bbminx = std::min(std::min(ax,bx),cx);
+    int bbminy = std::min(std::min(ay,by),cy);
+    int bbmaxx = std::max(std::max(ax,bx),cx);
+    int bbmaxy = std::max(std::max(ay,by),cy);
+    double total_area = signed_triangle_area(ax,ay,bx,by,cx,cy);
+    if(total_area < 1.) return;
 
-    if(ay != by)
-    {
-        int segment_height = by - ay;
-        for (int y = ay; y <= by; y++)
+#pragma omp parallel for
+    for(int x = bbminx; x <= bbmaxx; x++)
+        for (int y = bbminy; y < bbmaxy; y++)
         {
-            int x1 = ax + ((cx-ax) * (y-ay)) / total_height;
-            int x2 = ax + ((bx-ax) * (y-ay)) / segment_height;
-            for(int x = std::min(x1,x2); x < std::max(x1,x2); x++)
-            {
-                img.set(x,y,color);
-            }
+            double alpha = signed_triangle_area(x,y,bx,by,cx,cy) / total_area;
+            double beta = signed_triangle_area(ax,ay,x,y,cx,cy)/ total_area;
+            double gamma = signed_triangle_area(ax,ay,bx,by,x,y)/ total_area;
+            
+            if(alpha < 0 || beta < 0 || gamma < 0) continue;
+            img.set(x,y,color);
         }
-    }
-    if(by != cy)
-    {
-        int segment_height = cy - by;
-        for (int y = by; y <= cy; y++)
-        {
-            int x1 = ax + ((cx-ax) * (y-ay)) / total_height;
-            int x2 = bx + ((cx-bx) * (y-by)) / segment_height;
-            for(int x = std::min(x1,x2); x < std::max(x1,x2); x++)
-            {
-                img.set(x,y,color);
-            }
-        }
-    }
+        
 }

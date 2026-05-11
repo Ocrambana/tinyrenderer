@@ -22,5 +22,12 @@ template<> struct vec<3>
     double& operator[](const int i)       {assert(i>=0 && i<3); return i? (1==i ? y : z) : x;}
     double  operator[](const int i) const {assert(i>=0 && i<3); return i? (1==i ? y : z) : x;}
 };
-
 typedef vec<3> vec3;
+
+template<> struct vec<2>
+{
+    double x=0, y=0;
+    double& operator[](const int i)       {assert(i>=0 && i<2); return i? y : x;}
+    double  operator[](const int i) const {assert(i>=0 && i<2); return i? y : x;}
+};
+typedef vec<2> vec2;

@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 #include <tuple>
+#include <algorithm>
 
 constexpr int width  = 400;
 constexpr int height = 400;
@@ -18,7 +19,7 @@ constexpr TGAColor blue    = {255, 128,  64, 255};
 constexpr TGAColor yellow  = {  0, 200, 255, 255};
 
 void line(int ax, int ay, int bx, int by, TGAImage &img, const TGAColor &color);
-void triangle(int ax, int ay, int az, int bx, int by, int bz, int cx, int cy,  int cz,TGAImage &img, TGAImage &zBuf, const TGAColor &color);
+void triangle(int ax, int ay, int az, int bx, int by, int bz, int cx, int cy,  int cz,TGAImage &img, double* zBuf, const TGAColor &color);
 
 vec3 rotate(vec3 v)
 {
@@ -56,6 +57,9 @@ int main(int argc, char** argv)
     }
 
     TGAImage framebuffer(width, height, TGAImage::RGB);
+    double zBufArray[width*height];
+    std::fill(std::begin(zBufArray),std::end(zBufArray), 0.0);
+    
     TGAImage zBuffer(width, height, TGAImage::GRAYSCALE);
     Model m(argv[1]);
 
@@ -69,9 +73,17 @@ int main(int argc, char** argv)
         rnd[0] = std::rand()%255;
         rnd[1] = std::rand()%255;
         rnd[2] = std::rand()%255;
-        triangle(ax,ay,az,bx,by,bz,cx,cy,cz, framebuffer, zBuffer,rnd);
+        triangle(ax,ay,az,bx,by,bz,cx,cy,cz, framebuffer, zBufArray,rnd);
     }
     
+    double *p_max = std::max_element(std::begin(zBufArray),std::end(zBufArray));
+    double max = *p_max;
+    for (size_t i = 0; i < width; i++)
+        for (size_t j = 0; j < height; j++)
+        {
+            unsigned char c = static_cast<unsigned char>(zBufArray[i+j*width]/ max * 255);
+            zBuffer.set(i,j,{c});
+        }
 
     framebuffer.write_tga_file("framebuffer.tga");
     zBuffer.write_tga_file("zbuffer.tga");
@@ -111,7 +123,7 @@ void line(int ax, int ay, int bx, int by, TGAImage &img, const TGAColor &color)
     }
 }
 
-void triangle(int ax, int ay, int az, int bx, int by, int bz, int cx, int cy,  int cz,TGAImage &img, TGAImage &zBuf, const TGAColor &color)
+void triangle(int ax, int ay, int az, int bx, int by, int bz, int cx, int cy,  int cz,TGAImage &img, double* zBuf, const TGAColor &color)
 {
     int bbminx = std::min(std::min(ax,bx),cx);
     int bbminy = std::min(std::min(ay,by),cy);
@@ -129,11 +141,10 @@ void triangle(int ax, int ay, int az, int bx, int by, int bz, int cx, int cy,  i
             double gamma = signed_triangle_area(x,y,ax,ay,bx,by)/ total_area;
             
             if(alpha < 0 || beta < 0 || gamma < 0) continue;
-            unsigned char z = static_cast<unsigned char>(alpha * az + beta * bz + gamma * cz);
+            double z = alpha * az + beta * bz + gamma * cz;
             
-            if(zBuf.get(x,y)[0] >= z) continue;
-
-            zBuf.set(x,y,{z});
+            if(zBuf[x+y*width] >= z) continue;
+            zBuf[x+y*width] = z;
             img.set(x,y,color);
         }
         

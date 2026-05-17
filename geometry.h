@@ -36,7 +36,7 @@ template <int n> vec<n> operator-(const vec<n> &lhs, const vec<n> &rhs)
 
 template <int n> double operator*(const double &lhs, const vec<n> &rhs)
 {
-    double v; 
+    double v = 0; 
     for(size_t i =0; i<n;i++) 
         v += lhs * rhs[i]; 
     return v;
@@ -50,7 +50,7 @@ template <int n> double operator*(const vec<n> &lhs, const double &rhs)
 // dot product
 template <int n> double operator*(const vec<n> &lhs, const vec<n> &rhs)
 {
-    double v; 
+    double v = 0; 
     for(size_t i =0; i<n;i++) 
         v += lhs[i] * rhs[i]; 
     return v;

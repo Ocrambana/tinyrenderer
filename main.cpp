@@ -20,6 +20,19 @@ constexpr TGAColor yellow  = {  0, 200, 255, 255};
 void line(int ax, int ay, int bx, int by, TGAImage &img, const TGAColor &color);
 void triangle(int ax, int ay, int az, int bx, int by, int bz, int cx, int cy,  int cz,TGAImage &img, TGAImage &zBuf, const TGAColor &color);
 
+vec3 rotate(vec3 v)
+{
+    constexpr double a = M_PI /6;
+    const mat<3,3> Ry = {{{std::cos(a),0,std::sin(a)},{0,1,0},{-std::sin(a), 0 , std::cos(a)}}};
+    return Ry*v;
+}
+
+vec3 perspective(vec3 v)
+{
+    constexpr double c = 3; // distanza del far plane
+    return v / (1-v.z/c);
+}
+
 std::tuple<int,int,int> project(vec3 v)
 {
     return {
@@ -49,9 +62,9 @@ int main(int argc, char** argv)
     std::srand(std::time({}));
     for (int i = 0; i < m.nfaces(); i++)
     {
-        auto [ax,ay, az] = project(m.vert(i, 0));
-        auto [bx,by, bz] = project(m.vert(i, 1));
-        auto [cx,cy, cz] = project(m.vert(i, 2));
+        auto [ax,ay, az] = project(perspective(rotate(m.vert(i, 0))));
+        auto [bx,by, bz] = project(perspective(rotate(m.vert(i, 1))));
+        auto [cx,cy, cz] = project(perspective(rotate(m.vert(i, 2))));
         TGAColor rnd;
         rnd[0] = std::rand()%255;
         rnd[1] = std::rand()%255;

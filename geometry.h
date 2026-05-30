@@ -106,7 +106,7 @@ template<int n> vec<n> normalized(const vec<n> &v)
     return v / norm(v);    
 }
 
-inline vec<3> cross(vec<3> &lhs, vec<3> &rhs)
+inline vec<3> cross(const vec<3> &lhs, const vec<3> &rhs)
 {
     return {    
         lhs.y * rhs.z - lhs.z * rhs.y,
@@ -131,11 +131,13 @@ template<int nrows, int ncols> struct mat
 
     double cofactor(const int row, const int col) const
     {
+        size_t row_t = static_cast<size_t>(row);
+        size_t col_t = static_cast<size_t>(col);
         mat<nrows-1,ncols-1> submat;
         for (size_t i = 0; i < nrows-1; i++)
             for (size_t j = 0; j < ncols-1; j++)
             {
-                submat[i][j] =  rows[i+int(i>=row)][j+int(j>=col)];               
+                submat[i][j] =  rows[i+int(i>=row_t)][j+int(j>=col_t)];               
             }
         return submat.det() * ((row+col)%2? -1 : 1);
     }
@@ -211,7 +213,7 @@ template<int nrows, int ncols> mat<nrows,ncols> operator*(const double &lhs, con
     return rhs*lhs;
 }
 
-template<int nrows, int ncols> mat<nrows,ncols> operator/(const mat<nrows, ncols> &lhs, double &rhs)
+template<int nrows, int ncols> mat<nrows,ncols> operator/(const mat<nrows, ncols> &lhs, const double &rhs)
 {
     mat<nrows,ncols> res;
     for (size_t i = 0; i < nrows; i++)
@@ -220,11 +222,6 @@ template<int nrows, int ncols> mat<nrows,ncols> operator/(const mat<nrows, ncols
             res[i][j] = lhs[i][j] / rhs;
         }
     return res;            
-}
-
-template<int nrows, int ncols> mat<nrows,ncols> operator/(const double &lhs, const mat<nrows, ncols> &rhs)
-{
-    return rhs/lhs;
 }
 
 template <int nrows, int ncols> mat<nrows, ncols> operator+(const mat<nrows,ncols> &lhs, const mat<nrows,ncols> &rhs)

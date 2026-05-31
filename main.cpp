@@ -24,17 +24,15 @@ constexpr TGAColor yellow  = {  0, 200, 255, 255};
 
 mat<4,4> ModelView, Viewport, Perspective;
 
-void line(int ax, int ay, int bx, int by, TGAImage &img, const TGAColor &color);
-void triangle(int ax, int ay, int az, int bx, int by, int bz, int cx, int cy,  int cz,TGAImage &img, double* zBuf, const TGAColor &color);
 void rasterize(const vec4 clip[3], double *zbuffer, TGAImage &img, const TGAColor color);
 
 void viewport(const int x, const int y, const int w, const int h)
 {
     Viewport = {{
-        {w * .5,      0,    0, x + w * .5},
-        {     0, h * .5,    0, y + h * .5},
-        {     0,      0,    1,          0},
-        {     0,      0,    0,          1}
+        {w * .5,      0.,    0., x + w * .5},
+        {     0, h * .5,    0., y + h * .5},
+        {     0.,      0.,    1.,          0.},
+        {     0.,      0.,    0.,          1.}
     }};
 }
 
@@ -72,33 +70,6 @@ void lookAt(const vec3 &eye, const vec3 &center, const vec3 &up)
 
 }
 
-vec3 rotate(vec3 v)
-{
-    constexpr double a = M_PI /6;
-    const mat<3,3> Ry = {{{std::cos(a),0,std::sin(a)},{0,1,0},{-std::sin(a), 0 , std::cos(a)}}};
-    return Ry*v;
-}
-
-vec3 perspective(vec3 v)
-{
-    constexpr double c = 3; // distanza del far plane
-    return v / (1-v.z/c);
-}
-
-std::tuple<int,int,int> project(vec3 v)
-{
-    return {
-        (v.x + 1.) * width/2,
-        (v.y + 1.) * height/2,
-        (v.z + 1.) * 255./2,
-    };
-}
-
-double signed_triangle_area(int ax, int ay, int bx, int by, int cx, int cy)
-{
-    return .5 * ((by-ay) * (bx+ax) + (cy-by) * (cx+bx) + (ay-cy)*(ax+cx));
-}
-
 int main(int argc, char** argv) 
 {
     if(argc != 2)
@@ -108,7 +79,7 @@ int main(int argc, char** argv)
     }
 
     lookAt(eye, center, up);
-    perspective(normalized(eye-center));
+    perspective(norm(eye-center));
     viewport(width/16,height/16,width*7/8,height*7/8);
 
     TGAImage framebuffer(width, height, TGAImage::RGB);
@@ -117,6 +88,7 @@ int main(int argc, char** argv)
     
     Model m(argv[1]);
     std::srand(std::time({}));
+
     for (int i = 0; i < m.nfaces(); i++)
     {
         vec4 clip[3];
@@ -169,44 +141,16 @@ void line(int ax, int ay, int bx, int by, TGAImage &img, const TGAColor &color)
     }
 }
 
-void triangle(int ax, int ay, int az, int bx, int by, int bz, int cx, int cy,  int cz,TGAImage &img, double* zBuf, const TGAColor &color)
-{
-    int bbminx = std::min(std::min(ax,bx),cx);
-    int bbminy = std::min(std::min(ay,by),cy);
-    int bbmaxx = std::max(std::max(ax,bx),cx);
-    int bbmaxy = std::max(std::max(ay,by),cy);
-    double total_area = signed_triangle_area(ax,ay,bx,by,cx,cy);
-    if(total_area < 1.) return;
-
-#pragma omp parallel for
-    for(int x = bbminx; x <= bbmaxx; x++)
-        for (int y = bbminy; y < bbmaxy; y++)
-        {
-            double alpha = signed_triangle_area(x,y,bx,by,cx,cy) / total_area;
-            double beta = signed_triangle_area(x,y,cx,cy,ax,ay)/ total_area;
-            double gamma = signed_triangle_area(x,y,ax,ay,bx,by)/ total_area;
-            
-            if(alpha < 0 || beta < 0 || gamma < 0) continue;
-            double z = alpha * az + beta * bz + gamma * cz;
-            
-            if(zBuf[x+y*width] >= z) continue;
-            zBuf[x+y*width] = z;
-            img.set(x,y,color);
-        }
-        
-}
-
 void rasterize(const vec4 clip[3], double *zbuffer, TGAImage &img, const TGAColor color)
 {
     vec4 ndc[3] = { clip[0]/clip[0].w, clip[1]/clip[1].w, clip[2]/clip[2].w};
     vec2 screen[3] = { (Viewport * ndc[0]).xy(), (Viewport * ndc[1]).xy(), (Viewport * ndc[2]).xy()};
-
     mat<3,3> ABC = {{
         {screen[0].x,screen[0].y,1.},
         {screen[1].x,screen[1].y,1.},
         {screen[2].x,screen[2].y,1.}
     }};
-    if(ABC.det() < 1) return;
+    if(ABC.det() < 1.) return;
 
     auto [bbminx,bbmaxx] = std::minmax({screen[0].x,screen[1].x,screen[2].x});
     auto [bbminy,bbmaxy] = std::minmax({screen[0].y,screen[1].y,screen[2].y});

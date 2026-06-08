@@ -54,7 +54,8 @@ struct PhongShader : IShader
         vec3 n =  normalized(cross(ab,ac));
         // vec3 center = (tri[0] + tri[1] + tri[2]) / 3.;
 
-        vec3 l = normalized(bar - sunPos);
+        // vec3 l = normalized(bar - sunPos);
+        vec3 l = sunPos;
         double cos_alpha = n * l;
         float diffuse = std::max(0., cos_alpha);
 
@@ -100,7 +101,7 @@ int main(int argc, char** argv)
     for (int i = 0; i < m.nfaces(); i++)
     {
         PhongShader shader(m);
-        shader.sunPos = {2,0,0};
+        shader.sunPos = {-2,0,0};
         shader.ambient = .1;
         shader.cameraPos = eye;
         shader.specularPower = 32.0;

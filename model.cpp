@@ -21,12 +21,12 @@ Model::Model(const std::string filename)
             for(int i:{0,1,2}) ss >> v[i];
             verts.push_back(v);
         }
-        if(!line.compare(0,2,"vn"))
+        else if(!line.compare(0,3,"vn "))
         {
             ss >> trash;
             vec3 v;
             for(int i:{0,1,2}) ss >> v[i];
-            norms.push_back(v);
+            norms.push_back(normalized(v));
         }
         else if(!line.compare(0,2,"f "))
         {

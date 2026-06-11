@@ -5,33 +5,11 @@
 extern mat<4,4> ModelView, Viewport, Perspective;
 extern double *zBuffer;
 
-struct RandomShader : IShader
-{
-    const Model &model;
-    TGAColor color = {};
-    vec3 tri[3];
-
-    RandomShader(const Model &m) : model(m) {}
-
-    virtual vec4 vertex(const int face, const int vert)
-    {
-        vec3 v = model.vert(face,vert);
-        vec4 gl_Position = ModelView * vec4{v.x,v.y,v.z,1.};
-        tri[vert] = gl_Position.xyz();
-        return Perspective * gl_Position;
-    }
-
-    virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const
-    {
-
-        return {false, color};
-    }
-};
-
 struct PhongShader : IShader
 {
     const Model &model;
     vec3 tri[3];
+    vec3 norm[3];
     vec3 sunPos;
     double ambient;
     double specularPower;
@@ -44,17 +22,24 @@ struct PhongShader : IShader
         vec3 v = model.vert(face,vert);
         vec4 gl_Position = ModelView * vec4{v.x,v.y,v.z,1.};
         tri[vert] = gl_Position.xyz();
+
+        vec3 n = model.norm(face,vert);
+        norm[vert] =(ModelView.invert().transpose() * vec4{n.x,n.y,n.z,0.}).xyz();
+        
         return Perspective * gl_Position;
     }
     
     virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const
     {
-        vec3 ab = tri[1] - tri[0];
-        vec3 ac = tri[2] - tri[0];
-        vec3 n =  normalized(cross(ab,ac));
-        // vec3 center = (tri[0] + tri[1] + tri[2]) / 3.;
-
-        // vec3 l = normalized(bar - sunPos);
+        // vec3 ab = tri[1] - tri[0];
+        // vec3 ac = tri[2] - tri[0];
+        // vec3 n =  normalized(cross(ab,ac));
+        vec3 n =  normalized(
+            norm[0] * bar[0]+
+            norm[1] * bar[1]+
+            norm[2] * bar[2]
+        );
+        
         vec3 l = sunPos;
         double cos_alpha = n * l;
         float diffuse = std::max(0., cos_alpha);
@@ -63,7 +48,7 @@ struct PhongShader : IShader
         r = normalized(r);
         vec3 v = normalized(cameraPos - bar);
         double cos_beta = r * v;
-        double specular = std::pow(std::max(0., r.z), specularPower);
+        double specular = std::pow(std::max(0., cos_beta), specularPower);
         
         double sum = ambient + .4 * diffuse + .9 * specular;
         sum *= 255;

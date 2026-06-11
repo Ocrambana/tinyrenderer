@@ -21,6 +21,13 @@ Model::Model(const std::string filename)
             for(int i:{0,1,2}) ss >> v[i];
             verts.push_back(v);
         }
+        if(!line.compare(0,2,"vn"))
+        {
+            ss >> trash;
+            vec3 v;
+            for(int i:{0,1,2}) ss >> v[i];
+            norms.push_back(v);
+        }
         else if(!line.compare(0,2,"f "))
         {
             int f,t,n,cnt=0;
@@ -28,6 +35,7 @@ Model::Model(const std::string filename)
             while(ss >> f >> trash >> t >> trash >> n)
             {
                 facet_vert.push_back(--f);
+                facet_norms.push_back(--n);
                 cnt++;
             }
             if(3!=cnt)
@@ -37,5 +45,5 @@ Model::Model(const std::string filename)
             }
         }
     }
-    std::cout << "# v# " << nverts() << " f# " << nfaces() << std::endl;
+    std::cout << "# v# " << nverts() << " f# " << nfaces() << " n# " << nnorms() << std::endl;
 }

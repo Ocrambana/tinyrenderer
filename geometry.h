@@ -34,15 +34,15 @@ template <int n> vec<n> operator-(const vec<n> &lhs, const vec<n> &rhs)
     return v;
 }
 
-template <int n> double operator*(const double &lhs, const vec<n> &rhs)
+template <int n> vec<n> operator*(const double &lhs, const vec<n> &rhs)
 {
-    double v = 0; 
+    vec<n> v; 
     for(size_t i =0; i<n;i++) 
-        v += lhs * rhs[i]; 
+        v [i]= lhs * rhs[i]; 
     return v;
 }
 
-template <int n> double operator*(const vec<n> &lhs, const double &rhs)
+template <int n> vec<n> operator*(const vec<n> &lhs, const double &rhs)
 {
     return rhs * lhs;
 }

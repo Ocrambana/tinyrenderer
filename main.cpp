@@ -59,11 +59,7 @@ struct PhongShader : IShader
         double cos_alpha = n * l;
         float diffuse = std::max(0., cos_alpha);
 
-        vec3 r = {
-            2. * cos_alpha * n.x - l.x,
-            2. * cos_alpha * n.y - l.y,
-            2. * cos_alpha * n.z - l.z
-        };
+        vec3 r = 2.0 * n * cos_alpha - l;
         r = normalized(r);
         vec3 v = normalized(cameraPos - bar);
         double cos_beta = r * v;
@@ -78,7 +74,7 @@ struct PhongShader : IShader
 
 int main(int argc, char** argv) 
 {
-    if(argc != 2)
+    if(argc < 2)
     {
         std::cerr << "usage: "<< argv[0] << " path/to/model.obj" << std::endl;
         return 1;
@@ -97,9 +93,9 @@ int main(int argc, char** argv)
     init_zbuffer(width, height);
     TGAImage framebuffer(width, height, TGAImage::RGB, {177, 195, 209, 255});
 
-    Model m(argv[1]);
-    for (int i = 0; i < m.nfaces(); i++)
+    for (int i = 1; i < argc; i++)
     {
+        Model m(argv[i]);
         PhongShader shader(m);
         shader.sunPos = {-2,0,0};
         shader.ambient = .1;

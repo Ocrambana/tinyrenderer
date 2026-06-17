@@ -23,7 +23,7 @@ Model::Model(const std::string filename)
         }
         else if(!line.compare(0,3,"vn "))
         {
-            ss >> trash;
+            ss >> trash >> trash;
             vec3 v;
             for(int i:{0,1,2}) ss >> v[i];
             norms.push_back(normalized(v));

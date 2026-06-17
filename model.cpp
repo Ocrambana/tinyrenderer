@@ -28,6 +28,13 @@ Model::Model(const std::string filename)
             for(int i:{0,1,2}) ss >> v[i];
             norms.push_back(normalized(v));
         }
+        else if(!line.compare(0,3,"vt "))
+        {
+            ss >> trash >> trash;
+            vec3 v;
+            for(int i:{0,1,2}) ss >> v[i];
+            uvs.push_back(v);
+        }
         else if(!line.compare(0,2,"f "))
         {
             int f,t,n,cnt=0;
@@ -36,6 +43,7 @@ Model::Model(const std::string filename)
             {
                 facet_vert.push_back(--f);
                 facet_norms.push_back(--n);
+                facet_uv.push_back(--t);
                 cnt++;
             }
             if(3!=cnt)

@@ -10,12 +10,14 @@ struct PhongShader : IShader
     const Model &model;
     vec3 tri[3];
     vec3 norm[3];
-    vec3 sunPos;
+    vec3 l;
     double ambient;
     double specularPower;
-    vec3 cameraPos;
     
-    PhongShader(const Model &m) : model(m) {}
+    PhongShader(const Model &m, const vec3 light) : model(m) 
+    {
+        l = normalized((ModelView*vec4{light.x,light.y,light.z,0.}).xyz());
+    }
     
     virtual vec4 vertex(const int face, const int vert)
     {
@@ -31,26 +33,19 @@ struct PhongShader : IShader
     
     virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const
     {
-        // vec3 ab = tri[1] - tri[0];
-        // vec3 ac = tri[2] - tri[0];
-        // vec3 n =  normalized(cross(ab,ac));
         vec3 n =  normalized(
             norm[0] * bar[0]+
             norm[1] * bar[1]+
             norm[2] * bar[2]
         );
-        
-        vec3 l = sunPos;
-        double cos_alpha = n * l;
-        float diffuse = std::max(0., cos_alpha);
 
-        vec3 r = 2.0 * n * cos_alpha - l;
+        float diffuse = std::max(0., n*l);
+
+        vec3 r =  n * (n*l) * 2. - l;
         r = normalized(r);
-        vec3 v = normalized(cameraPos - bar);
-        double cos_beta = r * v;
-        double specular = std::pow(std::max(0., cos_beta), specularPower);
+        double specular = std::pow(std::max(0., r.z), specularPower);
         
-        double sum = ambient + .4 * diffuse + .9 * specular;
+        double sum = std::min(1., ambient + .4 * diffuse + .9 * specular);
         sum *= 255;
         TGAColor color = {sum,sum,sum, 255};
         return {false, color};
@@ -67,7 +62,7 @@ int main(int argc, char** argv)
     
     constexpr int width  = 400;
     constexpr int height = 400;
-    
+    constexpr vec3  light{ 1, 1, 1};
     constexpr vec3    eye{-1, 0, 2};
     constexpr vec3 center{ 0, 0, 0};
     constexpr vec3     up{ 0, 1, 0};
@@ -81,10 +76,8 @@ int main(int argc, char** argv)
     for (int i = 1; i < argc; i++)
     {
         Model m(argv[i]);
-        PhongShader shader(m);
-        shader.sunPos = {-2,0,0};
-        shader.ambient = .1;
-        shader.cameraPos = eye;
+        PhongShader shader(m,light);
+        shader.ambient = .3;
         shader.specularPower = 32.0;
         for (int f = 0; f < m.nfaces(); f++)
         {
